@@ -49,6 +49,8 @@ From https://www.ridgerun.com/developer/wiki/index.php/Gpio-int-test.c
 #define GPIOIN2 60
 #define GPIOIN3 31
 #define GPIOIN4 48
+#define WIDTH 8
+#define HEIGHT 8
 #define MAX_BUF 64
 
 /****************************************************************
@@ -70,6 +72,8 @@ void signal_handler(int sig)
 /****************************************************************
  * Main
  ****************************************************************/
+
+void printboard(char board[HEIGHT][WIDTH]);
 int main(int argc, char **argv, char **envp)
 {
 	struct pollfd fdset[5];
@@ -78,7 +82,20 @@ int main(int argc, char **argv, char **envp)
 	char buf[MAX_BUF];
 	unsigned int gpio;
 	int len;
-
+	char board[HEIGHT][WIDTH];
+	int xpos=WIDTH/2;
+	int ypos=HEIGHT/2;
+        int row;
+	int col;	
+	for(row=0;row<HEIGHT;row++){
+		printf("\n");
+		for(col=0;col<WIDTH;col++){
+			board[row][col]=' ';
+		}
+	}
+	board[xpos][ypos]='x';
+	printboard(board);
+	//printf("wgat");
 	/*if (argc < 2) {
 		printf("Usage: gpio-int <gpio-pin>\n\n");
 		printf("Waits for a change in the GPIO pin voltage level or input on stdin\n");
@@ -117,7 +134,6 @@ int main(int argc, char **argv, char **envp)
 	gpio_set_dir(GPIOIN2, "in");
 	gpio_set_edge(GPIOIN2, "both");  // Can be rising, falling or both
 	gpio_fd2 = gpio_fd_open(GPIOIN2, O_RDONLY);
-
 	gpio_export(GPIOIN3);
 	gpio_set_dir(GPIOIN3, "in");
 	gpio_set_edge(GPIOIN3, "both");  // Can be rising, falling or both
@@ -129,10 +145,10 @@ int main(int argc, char **argv, char **envp)
 	gpio_fd4 = gpio_fd_open(GPIOIN4, O_RDONLY);
 
 	timeout = POLL_TIMEOUT;
- 	FILE* f0 = fopen("/sys/class/leds/beaglebone\:green\:usr0/trigger", "w");
-	FILE* f1 = fopen("/sys/class/leds/beaglebone\:green\:usr1/trigger", "w");
-	FILE* f2 = fopen("/sys/class/leds/beaglebone\:green\:usr2/trigger", "w");
-	FILE* f3 = fopen("/sys/class/leds/beaglebone\:green\:usr3/trigger", "w");
+ 	FILE* f0 = fopen("/sys/class/leds/beaglebone:green:usr0/trigger", "w");
+	FILE* f1 = fopen("/sys/class/leds/beaglebone:green:usr1/trigger", "w");
+	FILE* f2 = fopen("/sys/class/leds/beaglebone:green:usr2/trigger", "w");
+	FILE* f3 = fopen("/sys/class/leds/beaglebone:green:usr3/trigger", "w");
 
     	if (f0 == NULL){
 		exit(EXIT_FAILURE);
@@ -157,7 +173,7 @@ int main(int argc, char **argv, char **envp)
 	}
 	fprintf(f3, "none");
 	fclose(f3);
-
+	
 			
 	while (keepgoing) {
 		memset((void*)fdset, 0, sizeof(fdset));
@@ -185,14 +201,12 @@ int main(int argc, char **argv, char **envp)
 			return -1;
 		}
       
-		if (rc == 0) {
-			printf(".");
-		}
+		
             
 		if (fdset[1].revents & POLLPRI) {
 			lseek(fdset[1].fd, 0, SEEK_SET);  // Read from the start of the file
 			read(fdset[1].fd, buf, MAX_BUF);
-			FILE* f = fopen("/sys/class/leds/beaglebone\:green\:usr3/brightness", "w");
+			FILE* f = fopen("/sys/class/leds/beaglebone:green:usr3/brightness", "w");
  
     			if (f == NULL){        			
 				exit(EXIT_FAILURE);
@@ -202,6 +216,11 @@ int main(int argc, char **argv, char **envp)
 			}
 			if (buf[0]=='0'){
 				fprintf(f, "1");
+				if((xpos+1)<WIDTH){
+					board[xpos+1][ypos]='x';
+					xpos++;
+				}
+				printboard(board);
 			}
 			fclose(f);
 				
@@ -209,7 +228,7 @@ int main(int argc, char **argv, char **envp)
 		if (fdset[2].revents & POLLPRI) {
 			lseek(fdset[2].fd, 0, SEEK_SET);  // Read from the start of the file
 			read(fdset[2].fd, buf, MAX_BUF);
-			FILE* f = fopen("/sys/class/leds/beaglebone\:green\:usr2/brightness", "w");
+			FILE* f = fopen("/sys/class/leds/beaglebone:green:usr2/brightness", "w");
  
     			if (f == NULL){        			
 				exit(EXIT_FAILURE);
@@ -219,6 +238,12 @@ int main(int argc, char **argv, char **envp)
 			}
 			if (buf[0]=='0'){
 				fprintf(f, "1");
+				if((xpos-1)>0){
+					board[xpos-1][ypos]='x';
+					xpos--;
+				}
+				printboard(board);
+
 			}
 			fclose(f);
 				
@@ -226,7 +251,7 @@ int main(int argc, char **argv, char **envp)
 		if (fdset[3].revents & POLLPRI) {
 			lseek(fdset[3].fd, 0, SEEK_SET);  // Read from the start of the file
 			read(fdset[3].fd, buf, MAX_BUF);
-			FILE* f = fopen("/sys/class/leds/beaglebone\:green\:usr1/brightness", "w");
+			FILE* f = fopen("/sys/class/leds/beaglebone:green:usr1/brightness", "w");
  
     			if (f == NULL){        			
 				exit(EXIT_FAILURE);
@@ -235,6 +260,11 @@ int main(int argc, char **argv, char **envp)
 				fprintf(f, "0");
 			}
 			if (buf[0]=='0'){
+				if((ypos+1)<HEIGHT){
+					board[xpos][ypos+1]='x';
+					ypos++;
+				}
+				printboard(board);
 				fprintf(f, "1");
 			}
 			fclose(f);
@@ -243,7 +273,7 @@ int main(int argc, char **argv, char **envp)
 		if (fdset[4].revents & POLLPRI) {
 			lseek(fdset[4].fd, 0, SEEK_SET);  // Read from the start of the file
 			read(fdset[4].fd, buf, MAX_BUF);
-			FILE* f = fopen("/sys/class/leds/beaglebone\:green\:usr0/brightness", "w");
+			FILE* f = fopen("/sys/class/leds/beaglebone:green:usr0/brightness", "w");
  
     			if (f == NULL){        			
 				exit(EXIT_FAILURE);
@@ -252,24 +282,51 @@ int main(int argc, char **argv, char **envp)
 				fprintf(f, "0");
 			}
 			if (buf[0]=='0'){
+				if((ypos-1)>0){
+					board[xpos][ypos-1]='x';
+					ypos--;
+				}
+				printboard(board);
 				fprintf(f, "1");
+
 			}
 			fclose(f);
 				
 		}
-		if (fdset[0].revents & POLLIN) {
+		/*if (fdset[0].revents & POLLIN) {
 			(void)read(fdset[0].fd, buf, 1);
 			printf("\npoll() stdin read 0x%2.2X\n", (unsigned int) buf[0]);
-		}
-
+		}*/
+		
+		
+		
 		fflush(stdout);
 	}
 	
-
+	
 	gpio_fd_close(gpio_fd1);
 	gpio_fd_close(gpio_fd2);
 	gpio_fd_close(gpio_fd3);
 	gpio_fd_close(gpio_fd4);
 	return 0;
+}
+void printboard(char board[HEIGHT][WIDTH]){
+	printf("\n****new board****");
+        int i;
+	int j;	
+	for(i=0;i<HEIGHT;i++){
+		printf("\n");
+		for(j=0;j<WIDTH;j++){
+			printf("%c",board[i][j]);
+		}
+	}
+	fflush(stdout);
+
+
+		
+
+
+
+
 }
 
